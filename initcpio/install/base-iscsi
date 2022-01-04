@@ -1,0 +1,103 @@
+#ø vim:set ft=sh:
+
+build ()
+{
+    for dir in etc proc sys dev root tmp run /usr/{bin,share} /var/{log,run,lock,spool}; do
+        add_dir "/$dir"
+    done
+
+    add_symlink /lib usr/lib
+    add_symlink /sbin usr/bin
+    add_symlink /bin usr/bin
+    add_symlink /usr/sbin bin
+
+    add_file "/etc/protocols"
+    add_file "/etc/services"
+    add_file "/etc/inputrc"
+
+    # DNS resolving
+    add_file "/etc/nsswitch.conf"
+    add_binary "/lib/libnss_files.so.2"
+    add_binary "/lib/libnss_dns.so.2"
+
+    # Users
+    add_file /usr/lib/initcpio/iscsi-target-box/group /etc/group
+    add_file /usr/lib/initcpio/iscsi-target-box/passwd /etc/passwd
+    add_file /usr/lib/initcpio/iscsi-target-box/shadow /etc/shadow
+
+    # INIT scripts
+    add_file /usr/lib/initcpio/iscsi-target-box/inittab /etc/inittab
+    add_file /usr/lib/initcpio/iscsi-target-box/rc.sysinit /etc/rc.sysinit
+    add_file /usr/lib/initcpio/iscsi-target-box/rc.shutdown /etc/rc.shutdown
+
+    # User profile
+    add_file /usr/lib/initcpio/iscsi-target-box/profile /etc/profile
+
+    # Install BusyBox and more utils
+    # add_binary /usr/lib/initcpio/iscsi-target-box/busybox/busybox /bin/busybox
+    # for applet in $(/usr/lib/initcpio/iscsi-target-box/busybox/busybox --list); do
+    #     add_symlink "/usr/bin/$applet" busybox
+    # done
+
+    # add kmod with applet symlinks
+    add_binary kmod
+    for applet in {dep,ins,rm,ls}mod mod{probe,info}; do
+        add_symlink "/usr/bin/$applet" kmod
+    done
+
+    add_binary blkid
+    add_binary mount
+    #add_binary mdadm
+    add_binary agetty
+
+    add_symlink "/etc/mtab" "/proc/self/mounts"
+
+    # Expansion udev
+    for rules in $(ls /usr/lib/udev/rules.d/); do
+        add_file "/usr/lib/udev/rules.d/$rules"
+    done
+    add_binary "/usr/lib/udev/cdrom_id"
+    add_binary "/usr/lib/udev/mtd_probe"
+
+    # Add an empty fstab to avoid mount warning when -o remount is used
+    >"$BUILDROOT/etc/fstab"
+
+    # iSCSI Enterprise Target
+    #add_binary /usr/sbin/ietd /sbin/ietd
+    #add_binary /usr/sbin/ietadm /sbin/ietadm
+
+    # Terminfo
+    for dir in /usr/share/terminfo/{a,l,v}; do
+        add_dir "$dir"
+    done
+    add_file "/usr/share/terminfo/a/ansi"
+    add_file "/usr/share/terminfo/l/linux"
+    add_file "/usr/share/terminfo/v/vt100"
+
+    add_file "/usr/lib/initcpio/init_functions" "/init_functions"
+    add_file "/usr/lib/initcpio/iscsi-target-box/init" "/init"
+    #add_file "/usr/lib/modprobe.d/usb-load-ehci-first.conf"
+
+   (
+#        . "$CONFIG"
+
+        # sanitize of any extra whitespace
+        read -r -a modules <<< "$MODULES"
+        read -r -a hooks <<< "$HOOKS"
+
+        {
+            (( ${#modules[*]} )) && printf 'MODULES="%s"\n' "${modules[*]%\?}"
+            (( ${#hooks[*]} )) && printf 'HOOKS="%s"\n' "${hooks[*]}"
+        } >"$BUILDROOT/config"
+    )
+
+}
+
+help ()
+{
+cat <<HELPEOF
+  This hook sets up all initial directories and installs base
+  utilities. DO NOT remove this one unless you know what you're
+  doing.
+HELPEOF
+}

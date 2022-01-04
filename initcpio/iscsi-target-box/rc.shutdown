@@ -1,0 +1,13 @@
+#!/bin/ash
+#
+# /etc/rc.shutdown
+#
+
+echo ""
+echo ":: Stopping iSCSI Enterprise Target daemon..."
+#ietadm --op delete
+#killall ietd
+sync
+modprobe -r iscsi_target_mod target_core_mod
+umount -a -r &> /dev/nul
+swapoff -a

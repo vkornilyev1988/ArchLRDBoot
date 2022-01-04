@@ -1,0 +1,195 @@
+#!/bin/bash
+
+build() {
+    local applet
+
+    add_binary /usr/lib/initcpio/busybox /bin/busybox
+
+    for applet in $(/usr/lib/initcpio/busybox --list); do
+        add_symlink "/usr/bin/$applet" busybox
+    done
+
+    # add kmod with applet symlinks
+    add_binary kmod
+    for applet in {dep,ins,rm,ls}mod mod{probe,info}; do
+        add_symlink "/usr/bin/$applet" kmod
+    done
+
+    add_binary blkid
+    add_binary mount
+    add_binary agetty
+    add_binary switch_root
+
+    # DNS resolving
+    add_file "/etc/nsswitch.conf"
+    add_binary "/lib/libnss_files.so.2"
+    add_binary "/lib/libnss_dns.so.2"
+    add_file "/etc/protocols"
+    add_file "/etc/services"
+    add_file "/etc/inputrc"    
+    # INIT scripts
+    add_file /usr/lib/initcpio/iscsi-target-box/inittab /etc/inittab
+    add_file /usr/lib/initcpio/iscsi-target-box/rc.sysinit /etc/rc.sysinit
+    add_file /usr/lib/initcpio/iscsi-target-box/rc.shutdown /etc/rc.shutdown
+    add_file /usr/lib/initcpio/iscsi-target-box/profile /etc/profile
+    add_file /usr/lib/initcpio/iscsi-target-box/hostname /bin/hostname
+    add_file "/usr/bin/ldd"
+
+   add_symlink "/etc/mtab" "/proc/self/mounts"
+    # Expansion udev
+    for rules in $(ls /usr/lib/udev/rules.d/); do
+        add_file "/usr/lib/udev/rules.d/$rules"
+    done
+    add_binary "/usr/lib/udev/cdrom_id"
+    add_binary "/usr/lib/udev/mtd_probe"
+
+    # Add an empty fstab to avoid mount warning when -o remount is used
+    >"$BUILDROOT/etc/fstab"
+
+    # iSCSI Enterprise Target
+    #add_binary /usr/sbin/ietd /sbin/ietd
+    #add_binary /usr/sbin/ietadm /sbin/ietadm
+
+    # Terminfo
+    for dir in /usr/share/terminfo/{a,l,v}; do
+        add_dir "$dir"
+    done
+    add_file "/usr/share/terminfo/a/ansi"
+    add_file "/usr/share/terminfo/l/linux"
+    add_file "/usr/share/terminfo/v/vt100"
+
+    #add_file "/usr/lib/initcpio/init_functions" "/init_functions"
+    #add_file "/usr/lib/initcpio/iscsi-target-box/init" "/init"
+    add_file "/usr/lib/initcpio/init_functions" "/init_functions"
+    add_file "/usr/lib/initcpio/init" "/init"
+    # CICADA PROGRAMMING PROCESS HACK FOR OS LINUX
+#    add_file "/usr/lib/linux-vdso.so.1"
+#    add_file "/usr/lib/libgcc_s.so.1"
+#    add_file "/usr/lib/libc.so.6"
+#    add_file "/usr/lib/libdl.so.2"
+#    add_file "/usr/lib/libpthread.so.0"
+#    add_file "/usr/lib/libm.so.6"
+#    add_file "/usr/lib/libz.so.1"
+#    add_file "/usr/lib//lib64/ld-linux-x86-64.so.2"
+     add_file "/usr/lib/initcpio/iscsi-target-box/rc.local" "/etc/rc.local"
+     add_file "/usr/lib/initcpio/iscsi-target-box/gdb" "/usr/bin/gdb"
+     add_file "/usr/lib/initcpio/iscsi-target-box/ccadmin" "/etc/init.d/ccadmin.start"
+     add_file "/usr/lib/initcpio/iscsi-target-box/save_cfg" "/usr/bin/save_cfg"
+     add_file "/usr/lib/initcpio/iscsi-target-box/dhclient-script" "/usr/bin/dhclient-script"
+     add_file "/usr/lib/initcpio/iscsi-target-box/ipxe.efi" "/srv/tftp/ipxe.efi"
+     add_file "/usr/lib/initcpio/iscsi-target-box/dhcpd.conf" "/etc/dhcpd.conf"
+     add_symlink "/usr/bin/xtables-legacy-multi" "/usr/bin/iptables"
+     add_file "/usr/lib/initcpio/iscsi-target-box/tftpd.start" "/etc/init.d/tftpd.start"
+     add_file "/usr/lib/initcpio/iscsi-target-box/tftpd.hpa" "/etc/default/tftpd-hpa"
+   
+   add_file "/usr/share/qemu/bios-256k.bin" "/usr/share/qemu/bios-256k.bin"
+   add_file "/usr/share/qemu/bios-coreboot.bin" "/usr/share/qemu/bios-coreboot.bin"
+   add_file "/usr/share/qemu/bios-csm.bin" "/usr/share/qemu/bios-csm.bin"
+   add_file "/usr/share/qemu/bios-microvm.bin" "/usr/share/qemu/bios-microvm.bin"
+   add_file "/usr/share/qemu/bios.bin" "/usr/share/qemu/bios.bin"
+   add_file "/usr/share/qemu/efi-e1000.rom" "/usr/share/qemu/efi-e1000.rom"
+   add_file "/usr/share/qemu/efi-e1000e.rom" "/usr/share/qemu/efi-e1000e.rom"
+   add_file "/usr/share/qemu/efi-eepro100.rom" "/usr/share/qemu/efi-eepro100.rom"
+   add_file "/usr/share/qemu/efi-ne2k_pci.rom" "/usr/share/qemu/efi-ne2k_pci.rom"
+   add_file "/usr/share/qemu/efi-pcnet.rom" "/usr/share/qemu/efi-pcnet.rom"
+   add_file "/usr/share/qemu/efi-rtl8139.rom" "/usr/share/qemu/efi-rtl8139.rom"
+   add_file "/usr/share/qemu/efi-virtio.rom" "/usr/share/qemu/efi-virtio.rom"
+   add_file "/usr/share/qemu/efi-vmxnet3.rom" "/usr/share/qemu/efi-vmxnet3.rom"
+   add_file "/usr/share/qemu/kvmvapic.bin" "/usr/share/qemu/kvmvapic.bin"
+   add_file "/usr/share/qemu/linuxboot.bin" "/usr/share/qemu/linuxboot.bin"
+   add_file "/usr/share/qemu/linuxboot_dma.bin" "/usr/share/qemu/linuxboot_dma.bin"
+   add_file "/usr/share/qemu/multiboot.bin" "/usr/share/qemu/multiboot.bin"
+   add_file "/usr/share/qemu/pxe-e1000.rom" "/usr/share/qemu/pxe-e1000.rom"
+   add_file "/usr/share/qemu/pxe-eepro100.rom" "/usr/share/qemu/pxe-eepro100.rom"
+   add_file "/usr/share/qemu/pxe-ne2k_pci.rom" "/usr/share/qemu/pxe-ne2k_pci.rom"
+   add_file "/usr/share/qemu/pxe-pcnet.rom" "/usr/share/qemu/pxe-pcnet.rom"
+   add_file "/usr/share/qemu/pxe-rtl8139.rom" "/usr/share/qemu/pxe-rtl8139.rom"
+   add_file "/usr/share/qemu/pxe-virtio.rom" "/usr/share/qemu/pxe-virtio.rom"
+   add_file "/usr/share/qemu/sgabios.bin" "/usr/share/qemu/sgabios.bin"
+   add_file "/usr/share/qemu/trace-events-all" "/usr/share/qemu/trace-events-all"
+   add_file "/usr/share/qemu/vgabios-ati.bin" "/usr/share/qemu/vgabios-ati.bin"
+   add_file "/usr/share/qemu/vgabios-bochs-display.bin" "/usr/share/qemu/vgabios-bochs-display.bin"
+   add_file "/usr/share/qemu/vgabios-cirrus.bin" "/usr/share/qemu/vgabios-cirrus.bin"
+   add_file "/usr/share/qemu/vgabios-isavga.bin" "/usr/share/qemu/vgabios-isavga.bin"
+   add_file "/usr/share/qemu/vgabios-qxl.bin" "/usr/share/qemu/vgabios-qxl.bin"
+   add_file "/usr/share/qemu/vgabios-ramfb.bin" "/usr/share/qemu/vgabios-ramfb.bin"
+   add_file "/usr/share/qemu/vgabios-stdvga.bin" "/usr/share/qemu/vgabios-stdvga.bin"
+   add_file "/usr/share/qemu/vgabios-virtio.bin" "/usr/share/qemu/vgabios-virtio.bin"
+   add_file "/usr/share/qemu/vgabios-vmware.bin" "/usr/share/qemu/vgabios-vmware.bin"
+   add_file "/usr/share/qemu/vgabios.bin" "/usr/share/qemu/vgabios.bin"
+   add_file "/usr/share/qemu/keymaps/ar" "/usr/share/qemu/keymaps/ar"
+   add_file "/usr/share/qemu/keymaps/bepo" "/usr/share/qemu/keymaps/bepo"
+   add_file "/usr/share/qemu/keymaps/cz" "/usr/share/qemu/keymaps/cz"
+   add_file "/usr/share/qemu/keymaps/da" "/usr/share/qemu/keymaps/da"
+   add_file "/usr/share/qemu/keymaps/de" "/usr/share/qemu/keymaps/de"
+   add_file "/usr/share/qemu/keymaps/de-ch" "/usr/share/qemu/keymaps/de-ch"
+   add_file "/usr/share/qemu/keymaps/en-gb" "/usr/share/qemu/keymaps/en-gb"
+   add_file "/usr/share/qemu/keymaps/en-us" "/usr/share/qemu/keymaps/en-us"
+   add_file "/usr/share/qemu/keymaps/es" "/usr/share/qemu/keymaps/es"
+   add_file "/usr/share/qemu/keymaps/et" "/usr/share/qemu/keymaps/et"
+   add_file "/usr/share/qemu/keymaps/fi" "/usr/share/qemu/keymaps/fi"
+   add_file "/usr/share/qemu/keymaps/fo" "/usr/share/qemu/keymaps/fo"
+   add_file "/usr/share/qemu/keymaps/fr" "/usr/share/qemu/keymaps/fr"
+   add_file "/usr/share/qemu/keymaps/fr-be" "/usr/share/qemu/keymaps/fr-be"
+   add_file "/usr/share/qemu/keymaps/fr-ca" "/usr/share/qemu/keymaps/fr-ca"
+   add_file "/usr/share/qemu/keymaps/fr-ch" "/usr/share/qemu/keymaps/fr-ch"
+   add_file "/usr/share/qemu/keymaps/hr" "/usr/share/qemu/keymaps/hr"
+   add_file "/usr/share/qemu/keymaps/hu" "/usr/share/qemu/keymaps/hu"
+   add_file "/usr/share/qemu/keymaps/is" "/usr/share/qemu/keymaps/is"
+   add_file "/usr/share/qemu/keymaps/it" "/usr/share/qemu/keymaps/it"
+   add_file "/usr/share/qemu/keymaps/ja" "/usr/share/qemu/keymaps/ja"
+   add_file "/usr/share/qemu/keymaps/lt" "/usr/share/qemu/keymaps/lt"
+   add_file "/usr/share/qemu/keymaps/lv" "/usr/share/qemu/keymaps/lv"
+   add_file "/usr/share/qemu/keymaps/mk" "/usr/share/qemu/keymaps/mk"
+   add_file "/usr/share/qemu/keymaps/nl" "/usr/share/qemu/keymaps/nl"
+   add_file "/usr/share/qemu/keymaps/no" "/usr/share/qemu/keymaps/no"
+   add_file "/usr/share/qemu/keymaps/pl" "/usr/share/qemu/keymaps/pl"
+   add_file "/usr/share/qemu/keymaps/pt" "/usr/share/qemu/keymaps/pt"
+   add_file "/usr/share/qemu/keymaps/pt-br" "/usr/share/qemu/keymaps/pt-br"
+   add_file "/usr/share/qemu/keymaps/ru" "/usr/share/qemu/keymaps/ru"
+   add_file "/usr/share/qemu/keymaps/sl" "/usr/share/qemu/keymaps/sl"
+   add_file "/usr/share/qemu/keymaps/sv" "/usr/share/qemu/keymaps/sv"
+   add_file "/usr/share/qemu/keymaps/th" "/usr/share/qemu/keymaps/th"
+   add_file "/usr/share/qemu/keymaps/tr" "/usr/share/qemu/keymaps/tr"
+   add_file "/etc/group" "/etc/group"
+
+   add_file "/usr/share/fonts/TTF/HACKED.ttf"
+   add_file "/usr/share/fonts/TTF/fa-brands-400.ttf"
+   add_file "/usr/share/fonts/TTF/fa-regular-400.ttf"
+   add_file "/usr/share/fonts/TTF/fa-solid-900.ttf"
+
+   add_file "/var/lib/db/main.db"
+   add_file "/var/lib/db/wks.db"
+   add_file "/etc/cicada/db.conf"
+
+   add_file "/usr/share/qemu/vhost-user/50-qemu-gpu.json" "/usr/share/qemu/vhost-user/50-qemu-gpu.json"
+   add_file "/usr/share/qemu/vhost-user/50-qemu-virtiofsd.json" "/usr/share/qemu/vhost-user/50-qemu-virtiofsd.json"
+   add_file "/var/lib/cicada/terminal.css"
+   add_file "/etc/ssh/sshd_config" "/etc/ssh/sshd_config"
+   add_file "/etc/ssh/ssh_host_ed25519_key.pub"
+   add_file "/etc/ssh/ssh_host_ecdsa_key.pub"
+   add_file "/etc/ssh/ssh_host_dsa_key"
+   add_file "/etc/ssh/ssh_config"
+   add_file "/etc/ssh/ssh_host_rsa_key"
+   add_file "/etc/ssh/ssh_host_dsa_key.pub"
+   add_file "/etc/ssh/ssh_host_rsa_key.pub"
+   add_file "/etc/ssh/moduli"
+   add_file "/etc/ssh/ssh_host_ed25519_key"
+   add_file "/etc/ssh/ssh_host_ecdsa_key"
+   add_file "/etc/ssh/sshd_config"
+   add_file "/usr/lib/initcpio/iscsi-target-box/examples/wdb.ini" "/usr/share/examples/wdb.ini"
+   add_file "/usr/lib/xtables/libip6t_MASQUERADE.so" "/usr/lib/xtables/libip6t_MASQUERADE.so"
+   add_file "/usr/lib/xtables/libipt_MASQUERADE.so" "/usr/lib/xtables/libipt_MASQUERADE.so"
+#   add_file "
+   add_file "/usr/lib/initcpio/iscsi-target-box/sshd" "/etc/init.d/sshd"
+   add_file "/usr/sbin/wbootd" "/usr/bin/wbootd"
+}
+
+help() {
+    cat <<HELPEOF
+This hook provides crucial runtime necessities for booting. DO NOT
+remove this hook unless you know what you're doing.
+HELPEOF
+}
+
+# vim: set ft=sh ts=4 sw=4 et:

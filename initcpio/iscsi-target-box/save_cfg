@@ -1,0 +1,7 @@
+#!/bin/sh
+[ ! -d "/new_root" ] && mount -L sysroot0 /new_root || true
+if [ -d "/etc" -a -d "/new_root" ]; then
+	[ ! -d "/new_root/cfg" ] && mkdir -p /new_root/cfg || true
+	[ -d "/etc/init.d" ] && cp -Rfp /etc/init.d/ /new_root/cfg || true
+        [ -f "/etc/rc.local" ] && cp -Rfp /etc/rc.local /new_root/cfg || true
+fi

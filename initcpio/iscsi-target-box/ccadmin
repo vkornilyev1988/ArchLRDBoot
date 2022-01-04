@@ -1,0 +1,38 @@
+#!/bin/sh
+NAME=ccadmin
+PRG=/usr/bin/$NAME
+PID=/var/run/${NAME}.pid
+__start__daemon__()
+{
+if [ ! -f "${PID}" ]; then
+	 exec $PRG 2>/dev/null >/dev/null 3>/dev/null & 
+echo $! > $PID || true
+[ -f "$PID" ] && printf "\033[0;92m%s" "[ OK ]" || printf "\033[0;91m%s\n" "[ ER ]"
+printf "\n"
+else
+ printf "\033[0;96m%s\n" "Already running `cat $PID`"
+fi
+}
+__stop__daemon__()
+{
+[ -f "${PID}" ] && kill -9 `cat $PID` 2>/dev/null || true
+rm -Rfv $PID 2>/dev/null 
+[ ! -f "$PID" ] && printf "\033[0;92m%s" "[ OK ]" || printf "\033[0;91m%s\n" "[ ER ]"
+printf "\n"
+
+}
+
+__restart__daemon__()
+{
+__stop__daemon__
+sleep 1
+__start__daemon__
+}
+
+
+case $1 in
+	start) __start__daemon__;;
+	stop) __stop__daemon__;;
+        restart) __restart__daemon__;;
+             *) echo "command arguments: (start|stop|restart)";;
+esac

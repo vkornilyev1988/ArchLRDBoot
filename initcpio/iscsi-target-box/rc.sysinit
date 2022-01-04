@@ -1,0 +1,42 @@
+#!/bin/ash
+#
+# /etc/rc.sysinit
+#
+
+echo "HELLLLLLLLL"
+msg "SDFSFSDFSDFSDF"
+
+if [ -f "/etc/hostname" ]; then
+    hostname -F /etc/hostname
+else
+    hostname iscsi-target-box
+fi
+
+if [ -d /sys/class/net/lo ]; then
+    echo ":: Bringing up loopback interface"
+    ifconfig lo 127.0.0.1 up
+    route add 127.0.0.1 lo
+    echo "127.0.0.1	localhost" >> /etc/hosts
+fi
+
+echo -n ":: Starting ACPI daemon..."
+mkdir -p /etc/acpi/events
+echo "event=button[ /]power" > /etc/acpi/events/powerbtn
+echo "action=/sbin/poweroff" >> /etc/acpi/events/powerbtn
+acpid
+echo "done."
+
+echo -n ":: Starting iSCSI Enterprise Target daemon..."
+/sbin/ietd
+echo "done."
+
+exec </dev/tty1 >/dev/tty1 2>&1
+
+if [ -f "/etc/rc.local" ]; then
+    echo ":: Run RC local script"
+    /etc/rc.local
+fi
+
+sleep 1
+
+# End of file

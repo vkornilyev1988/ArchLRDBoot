@@ -1,0 +1,132 @@
+#!/usr/bin/ash
+PATH=/usr/bin
+
+
+echo "START CICADA CICADA CICADA"
+
+. /init_functions
+
+
+
+msg ":: Loading Initramfs"
+#mount -t proc proc /proc -o nosuid,noexec,nodev
+#mount -t sysfs sys /sys -o nosuid,noexec,nodev
+#mount -t devtmpfs dev /dev -o mode=0755,nosuid
+#mount -t tmpfs run /run -o nosuid,nodev,mode=0755
+msg "1"
+mkdir /dev/pts
+mount -t devpts devpts /dev/pts
+msg "2"
+
+mkdir /dev/shm
+mount -t tmpfs none /dev/shm
+msg "3"
+
+# parse the kernel command line
+# parse_cmdline
+msg "4"
+
+# if available, start udevd at this stage
+if [ -x /lib/udev/udevd ]; then
+    msg -n ":: Starting udevd..."
+    /lib/udev/udevd --daemon --resolve-names=never
+    udevd_running=1
+    msg "done."
+else
+    udevd_running=0
+fi
+msg "5"
+
+for d in ${disablehooks//,/ }; do
+    eval "hook_${d}=disabled"
+done
+msg "6"
+
+#earlymodules=${earlymodules//,/ }
+#if [ -n "${earlymodules## }" ]; then
+#    modprobe -qab ${earlymodules}
+#fi
+msg "7"
+
+. /config
+msg "8"
+
+#[ -n "${MODULES## }" ] && modprobe -qab $MODULES
+
+# If rootdelay is empty or not a non-negative integer, set it to 10
+if [ -z "${rootdelay}" ] || ! [ "${rootdelay}" -ge 0 ]; then
+    rootdelay=10
+fi
+msg "9"
+
+if [ -e "/hooks" ]; then
+    for h in ${HOOKS}; do
+        TST=""
+        eval "TST=\$hook_${h}"
+        if [ "${TST}" != "disabled" ]; then
+            run_hook () { msg "${h}: no run function defined"; }
+            if [ -e "/hooks/${h}" ]; then
+               . /hooks/${h}
+               msg ":: Running Hook [${h}]"
+               run_hook
+            fi
+        fi
+    done
+fi
+msg "10"
+
+if [ "${break}" = "y" ] || [ "${break}" = "premount" ]; then
+    echo ":: Pre-mount break requested, type 'exit' to resume operation"
+    launch_interactive_shell
+fi
+
+msg -n ":: Starting telnet daemon..."
+#telnetd
+msg "done."
+
+if [ -f "/message" ]; then
+    msg "$(cat /message)"
+fi
+
+rootdev=$(resolve_device "$root") && root=$rootdev
+unset rootdev
+
+# Save root device in /etc
+echo $root > /etc/cfg_root
+
+# Mount root at /cfg_root
+#mkdir -p /cfg_root
+#${mount_handler:-default_mount_handler} /cfg_root
+
+#if [ "$(stat -c %D /)" = "$(stat -c %D /cfg_root)" ]; then
+#    err "Failed to mount the config root device."
+#    echo
+#elif [ ! -x "/cfg_root/iscsi-target-etc" ]; then
+#    err "Config root device mounted successfully, but config dir does not exist."
+#else
+#    msg ":: Update files in /etc"
+#    cp -r -f -H /cfg_root/iscsi-target-etc/* /etc/
+#fi
+
+for srv in `ls /etc/init.d/*.start`; do
+	$srv start || true
+done
+
+if [ "${break}" = "postmount" ]; then
+    echo ":: Post-mount break requested, type 'exit' to resume operation"
+    launch_interactive_shell
+fi
+
+#umount -r /cfg_root &>/dev/nul
+#rmdir /cfg_root &>/dev/nul
+
+[ ! -d "/storage" ] && mkdir -p /storage 2>/dev/null || true
+
+echo ":: Starting system loggers"
+#syslogd
+#klogd
+[ -f "/etc/rc.local" ] && /etc/rc.local || true
+# Auto generate fstab
+cat /proc/mounts > /etc/fstab
+
+/usr/bin/shellscreen || /bin/sh

@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/8/trunk/iscsi-target-etc/iet
+END
+initiators.allow
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/8/trunk/iscsi-target-etc/iet/initiators.allow
+END
+targets.allow
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/8/trunk/iscsi-target-etc/iet/targets.allow
+END
+ietd.conf
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/8/trunk/iscsi-target-etc/iet/ietd.conf
+END

@@ -1,0 +1,30 @@
+=== iSCSI Target Box ===
+
+Author: Nomadic <nomadic.ua@gmail.com>
+
+iSCSI Enterprise Target mini-distribution based on Arch Linux mkinitcpio script.
+
+Read more http://wiki.archlinux.org/index.php/Mkinitcpio
+
+=== Installation ===
+
+Installing for dependencies:
+
+    * pacman -S mkinitcpio-nfs-utils
+    * install iscsitarget-kernel and iscsitarget-usr from AUR or compile by yourself fresh version from iSCSI Enterprise Target homepage
+    * unpack this archive in /usr/lib/initcpio/
+    * create link for install script: ln base-iscsi ../install/base-iscsi 
+
+=== Build ===
+
+Generate initramfs:
+
+    mkinitcpio -c /usr/lib/initcpio/iscsi-target-box/mkinitcpio.conf -g /boot/initrd-iscsi.img 
+
+Quick test with QEMU:
+
+    qemu -snapshot -kernel /boot/vmlinuz-linux -initrd /boot/initrd-iscsi.img 
+
+Default root password: 666666
+
+'iscsi-target-etc' - Local copy of configuration files copied in /etc at loading box.

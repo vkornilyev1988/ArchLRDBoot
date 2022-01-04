@@ -1,0 +1,7 @@
+#!/bin/sh
+
+	[ ! -d "/new_root" ] && mkdir -p /new_root 2>/dev/null || true
+	mount -L sysroot0 /new_root
+        [ -f "/new_root/boot/cicaboot.img" ] && cp -Rfp /new_root/boot/cicaboot.img /new_root/boot/cicaboot.img.old || true
+
+

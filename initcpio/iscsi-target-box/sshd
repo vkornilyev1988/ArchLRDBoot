@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# The is the "init" start/stop script for the OpenSSH server daemon "sshd"
+#
+# The following links should be made for proper "init" operation:
+#   ln -s /etc/init.d/sshd /etc/rc0.d/K30sshd
+#   ln -s /etc/init.d/sshd /etc/rc1.d/K30sshd
+#   ln -s /etc/init.d/sshd /etc/rc2.d/S20sshd
+#   ln -s /etc/init.d/sshd /etc/rcS.d/K30sshd
+#
+# The following are the config and key files:
+#   config: /usr/local/etc/ssh_host_key
+#   config: /usr/local/etc/ssh_host_key.pub
+#   config: /usr/local/etc/ssh_random_seed
+#   config: /usr/local/etc/sshd_config
+#   pidfile: /var/run/sshd.pid
+#
+# 9/04/02 Ivan	Ported script to Solaris from linux, changed to an sh vice bash
+# 2/25/03 Bob Modified for use on styma5.
+
+ExitCode=0
+Script="sshd"
+
+# Some functions to make the below more readable
+KeyGen=/usr/local/bin/ssh-keygen
+Sshd=/usr/local/sbin/sshd
+Rsa1Key=/usr/local/etc/ssh_host_key
+RsaKey=/usr/local/etc/ssh_host_rsa_key
+DsaKey=/usr/local/etc/ssh_host_dsa_key
+PidFile=/var/run/sshd.pid
+
+################################################################
+# Declare internal functions that will be called by this script
+################################################################
+
+do_rsa1_keygen()
+{
+   if [ ! -s $Rsa1Key ]
+   then
+	echo "Generating SSH1 RSA host key... \c"
+	if $KeyGen -q -t rsa -f $Rsa1Key -C '' -N '' > /dev/null 2>&1
+	then
+	   /bin/chmod 600 $Rsa1Key
+	   /bin/chmod 644 $Rsa1Key.pub
+	   echo "done\n"
+	else
+	   echo "FAILED\n"
+	   exit 1
+	fi
+   fi
+} # function do_rsa1_keygen
+
+################################################################
+do_rsa_keygen()
+{
+   if [ ! -s $RsaKey ]
+   then
+	echo "Generating SSH2 RSA host key... \c"
+	if $KeyGen -q -t ecdsa -f $RsaKey -C '' -N '' > /dev/null 2>&1
+	then
+	   /bin/chmod 600 $RsaKey
+	   /bin/chmod 644 $RsaKey.pub
+	   echo "done\n"
+	else
+	   echo "FAILED\n"
+	   exit 1
+	fi
+   fi
+} # function do_rsa_keygen
+
+################################################################
+do_dsa_keygen()
+{
+   if [ ! -s $DsaKey ]
+   then
+	echo "Generating SSH2 DSA host key... "
+	if $KeyGen -q -t dsa -f $DsaKey -C '' -N '' > /dev/null 2>&1
+	then
+	   /bin/chmod 600 $DsaKey
+	   /bin/chmod 644 $DsaKey.pub
+	   echo "done\n"
+	else
+	   echo "FAILED\n"
+	   exit 1
+	fi
+    fi
+} # end function do_dsa_keygen
+
+################################################################
+start()
+{
+# Create keys if necessary
+   [ ! -d "/usr/local/etc" ] && mkdir -p /usr/local/etc || true
+   do_rsa1_keygen
+   do_rsa_keygen
+   do_dsa_keygen
+
+   echo "Starting $Script:"
+   $Sshd
+   ExitCode=$?
+} # end function start
+
+################################################################
+stop()
+{
+   echo "Stopping $Script:"
+   /bin/pkill -f ${Sshd}
+   ExitCode=$?
+} # end function stop
+
+##################################################################
+#       Start Of Script
+##################################################################
+
+case "$1" in
+   start)
+	start
+	;;
+   stop)
+	stop
+	;;
+   restart)	
+	stop
+	start
+	;;
+   *)
+	echo "Usage: $Script {start|stop|restart}"
+	ExitCode=1
+esac
+
+exit $ExitCode
+
+# End sshd

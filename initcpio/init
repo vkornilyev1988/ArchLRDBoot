@@ -1,0 +1,105 @@
+#!/usr/bin/ash
+
+udevd_running=0
+mount_handler=default_mount_handler
+init=/sbin/init
+rd_logmask=0
+
+. /init_functions
+
+mount_setup
+
+
+msg ":: Loading Initramfs"
+#mount -t proc proc /proc -o nosuid,noexec,nodev
+#mount -t sysfs sys /sys -o nosuid,noexec,nodev
+#mount -t devtmpfs dev /dev -o mode=0755,nosuid
+#mount -t tmpfs run /run -o nosuid,nodev,mode=0755
+mkdir /dev/pts
+mount -t devpts devpts /dev/pts
+mkdir /dev/shm
+mount -t tmpfs none /dev/shm
+mkdir -p /var/empty
+mount -t tmpfs none -o mode=0700 /var/empty
+
+# parse the kernel command line
+parse_cmdline </proc/cmdline
+
+# setup logging as early as possible
+rdlogger_start
+
+for d in ${disablehooks//,/ }; do
+    [ -e "/hooks/$d" ] && chmod 644 "/hooks/$d"
+done
+
+. /config
+
+run_hookfunctions 'run_earlyhook' 'early hook' $EARLYHOOKS
+
+
+if [ -n "$earlymodules$MODULES" ]; then
+    modprobe -qab ${earlymodules//,/ } $MODULES
+fi
+[ -f "/usr/bin/gdb" ] && cat<<EOF || true
+#!/bin/sh
+echo "DEBUGGER POWEROFF"
+EOF
+
+
+[ ! -d "/var/lib/dhclient" ] && mkdir -p /var/lib/dhclient || true
+run_hookfunctions 'run_hook' 'hook' $HOOKS
+
+# honor the old behavior of break=y as a synonym for break=premount
+if [ "${break}" = "y" ] || [ "${break}" = "premount" ]; then
+    echo ":: Pre-mount break requested, type 'exit' to resume operation"
+    launch_interactive_shell
+fi
+
+rootdev=$(resolve_device "$root") && root=$rootdev
+unset rootdev
+
+fsck_root
+
+[ ! -d "/etc/wboot" ] && mkdir -p /etc/wboot || true
+
+
+# Mount root at /new_root
+"$mount_handler" /new_root
+
+[ ! -d "/usr/share/gui" ] && mkdir -p /usr/share/gui || true
+[ -f "/new_root/lib/uniGUI.tar.xz" ] && tar xpf /new_root/lib/uniGUI.tar.xz -C /usr/share/gui || true
+[ -d "/new_root/cfg/etc" ] && cp -Rfv /new_root/cfg/etc / || true
+run_hookfunctions 'run_latehook' 'late hook' $LATEHOOKS
+run_hookfunctions 'run_cleanuphook' 'cleanup hook' $CLEANUPHOOKS
+
+[ -f "/etc/rc.local" ] && /etc/rc.local || true
+if [ -d "/etc/init.d" ] ; then
+	for srv in `ls /etc/init.d/*.start`; do
+		$srv start || true
+	done
+fi
+unset srv
+dhclient eth0 2>/dev/null || true
+if [ -d "/new_root" ]; then
+	umount -f /new_root 2>/dev/null || true
+	rm -Rfv /new_root
+fi
+    launch_interactive_shell
+
+
+if [ "${break}" = "postmount" ]; then
+    echo ":: Post-mount break requested, type 'exit' to resume operation"
+    launch_interactive_shell
+fi
+
+[ ! -d "/storage" ] && mkdir -p /storage 2>/dev/null || true
+
+# this should always be the last thing we do before the switch_root.
+rdlogger_stop
+exec env -i \
+    "TERM=$TERM" \
+/usr/bin/shellscreen || /bin/sh
+#screen -- /usr/bin/wbootd || /bin/sh
+#    /usr/bin/switch_root /new_root $init "$@"
+
+# vim: set ft=sh ts=4 sw=4 et:

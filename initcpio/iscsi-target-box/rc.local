@@ -1,0 +1,25 @@
+#!/bin/sh
+[ ! -d "/var/lock" ] && mkdir -p /var/lock 2>/dev/null || true
+for i in `ls /dev/disk/by-label/` ; do
+	if [ $i != "sysroot0" ]; then
+		if [  $(lsblk /dev/disk/by-label/$i -o type | tail -n 1) == "disk" ]; then
+			[ ! -d "/storage/$i" ] && mkdir -p /storage/$i || true
+			mount /dev/disk/by-label/$i /storage/$i 2>/dev/null || true
+		fi
+	fi
+done
+
+
+#ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
+#ssh-keygen -q -N "" -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key
+#ssh-keygen -q -N "" -t ecdsa -f /etc/ssh/ssh_host_ecdsa_key
+#ssh-keygen -q -N "" -t ed25519 -f /etc/ssh/ssh_host_ed25519_key
+ifconfig lo inet 127.0.0.1 netmask 255.255.255.0 up
+/sbin/sshd
+zpool import -a || true
+if [ ! -f "/etc/passwd" ]; then
+echo 'nobody:x:65534:65534:Nobody:/:/usr/bin/nologin' >> /etc/passwd
+echo 'root:x:0:0::/root:/bin/bash' >> /etc/passwd
+echo 'admin:x:1101:1101::/home/admin:/bin/bash' >> /etc/passwd
+fi
+[ -f "/usr/bin/shellinaboxd" ] && /usr/bin/shellinaboxd -b -t --css /var/lib/cicada/terminal.css -p 4400 -s /:SSH:localhost 2>/dev/null || true
