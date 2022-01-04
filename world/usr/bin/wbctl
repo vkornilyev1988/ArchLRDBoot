@@ -1,0 +1,45 @@
+#!/usr/bin/luajit
+local args = ...
+local bootctl = require"lrdboot" 
+local wbctl = { inifile = require"ini", socket = { socket =
+require"socket"} } function wbctl:init() local data =
+wbctl.inifile.load("/etc/wboot/wdb.ini") if data ~= nil and data.main ~=nil
+and data.main.socket ~= nil then wbctl.socket.SOCKET = data.main.socket; else wbctl.socket.SOCKET = "/tmp/socket.sock" end
+end function wbctl.socket:start()
+ 
+ 			 wbctl.socket.recvt, wbctl.socket.sendt = {},{} 
+ 			 wbctl.socket.unix = require"socket.unix" 
+ 			 wbctl.socket.master = wbctl.socket.unix() 
+ 			 wbctl.socket.master:settimeout(0.1) 
+ 			 wbctl.socket.obj = wbctl.socket.master:connect(wbctl.socket.SOCKET)
+			--assert(obj == nil)
+			print'before'
+			--socket.select(recvt, sendt)
+			print'after'
+			--print(mac,socket)
+	        
+end
+
+function wbctl.socket:stop() if wbctl.socket.master ~= nil then wbctl.socket.master:close() end end
+function sleep(s)
+  local ntime = os.time() + s
+  repeat until os.time() > ntime
+end  
+wbctl:init()
+		print("CLI START>>>>")
+
+bootctl.stop(args[1],args[2])
+bootctl.start(args[1],args[2])
+		-- sleep(15)
+		-- os.execute"sleep 15"
+		-- os.exit()
+
+		wbctl.socket:start() 
+			print('{"mac":"'..args[2]..'","command":"cmd_booting_ready()"}\n')
+			wbctl.socket.master:send('{"mac":"'..args[2]..'","command":"cmd_booting_ready()"}\n')
+		wbctl.socket:stop() 
+		print("END")
+		
+
+
+

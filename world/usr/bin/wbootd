@@ -1,0 +1,273 @@
+#!/usr/bin/luajit
+function dofile_args(file, args)
+			local f=loadfile(file)
+			f(args)
+end
+
+	ffi = require'ffi'
+	libsocket = require "socket"
+	libunix   = require "socket.unix"
+	socket    = assert(libunix())
+	SOCKET    = "/tmp/socket.sock"
+	inifile = require("ini")
+	posix = require"posix"
+	posixfork = posix.unistd
+	stopSrv = false
+	child = posix
+
+local lua = require'luastate'
+local luastate = require'luastate'
+local sleep = require"posix".unistd.sleep
+local wboot = {
+	state =  {
+		trheads = luastate.open(),
+		mac = {}
+	},	
+	socket = {}
+}
+
+function json_parse(indata)
+	local js = require"cjson"
+	if pcall(js.decode, indata) then return js.decode(indata) else return false end
+end
+
+function newset()
+    local reverse = {}
+    local set = {}
+    return setmetatable(set, {__index = {
+        insert = function(set, value)
+            if not reverse[value] then
+                table.insert(set, value)
+                reverse[value] = #set
+            end
+        end,
+        remove = function(set, value)
+            local index = reverse[value]
+            if index then
+                reverse[value] = nil
+                local top = table.remove(set)
+                if top ~= value then
+                    reverse[top] = index
+                    set[index] = top
+                end
+            end
+        end
+    }})
+end
+
+---------------------------------------------------------------------------------
+
+
+
+function wboot:start()
+	local main_cfg = inifile.load("/etc/wboot/wdb.ini")
+	if  main_cfg['main'] ~= nil and main_cfg['main'].socket ~= nil then 
+		SOCKET = main_cfg['main'].socket;
+				if require"lfs_ffi".attributes(SOCKET) then os.remove(SOCKET) end
+	end
+	main_cfg = nil
+	wboot.state.trheads:openlibs()
+		-- wboot.state.trheads:push(function()
+
+		-- 			   --up-values are not copied, so we have to require ffi again.
+		-- 			   local ffi = require'ffi'
+
+		-- 			   --this is our worker function that will run in a different thread.
+		-- 			   local function worker()
+		-- 			      --print() is thread-safe so no need to guard it.
+		-- 			  while 1 do   print'Hello from thread!'
+		-- 			  end
+		-- 			   end
+
+		-- 			   --make a ffi callback frame to call into our worker function.
+		-- 			   --luajit anchors both the callback object and its function
+		-- 			   --so we don't care about them getting garbage collected.
+		-- 			   local worker_cb = ffi.cast('void *(*)(void *)', worker)
+
+		-- 			   --get the callback pointer out of the Lua state as a number,
+		-- 			   --because we can't pass cdata between Lua states.
+		-- 			   --tonumber() works on x64 too in this case because the Lua state
+		-- 			   --was allocated by LuaJIT which can only allocate stuff in the
+		-- 			   --lowest 4GB of the address space.
+		-- 			   return tonumber(ffi.cast('intptr_t', worker_cb))
+					-- end)
+	wboot.socket:start()
+end
+
+
+function wboot:create_thread(worker, args, attrs)
+	local state = lua.open()
+	state:openlibs()
+	state:push(function(worker, args)
+		local ffi = require'ffi'
+		local function pass(...)
+			_G.retvals = {n = select('#', ...), ...}
+		end
+		local function wrapper()
+			pass(worker(args))
+		end
+		local wrapper_cb = ffi.cast('void *(*)(void *)', wrapper)
+		return tonumber(ffi.cast('intptr_t', wrapper_cb))
+	end)
+	local wrapper_cb_ptr = ffi.cast('void *', state:call(worker, args))
+	local thread = pthread.new(wrapper_cb_ptr, attrs)
+	local function join()
+		local status = thread:join()
+		state:getglobal'retvals'
+		local t = state:get(-1) or {n = 0}
+		state:close()
+		return status, unpack(t, 1, t.n)
+	end
+	return join, thread
+end
+
+
+function wboot:cmd(...)
+	local args = {...}
+		if mac ~= nil then
+			local M = require 'posix.unistd'
+			local r,w = M.pipe()
+			local childpid = M.fork()
+			if childpid == 0 then
+			   -- child reads from pipe
+				   -- M.close(w)  -- close unused write end
+				   socket:close()
+			   -- local b = M.read(r, 1)
+			   -- while #b == 1 do
+			   --    -- got a byte from the pipe, write it to stdout
+			   --    io.write(b)
+			   --    b = M.read(r, 1)
+			   -- end
+			   wboot.test_tread(args)
+			   -- M.close(r)
+			   M._exit(0)
+
+			else
+			   -- parent writes to pipe
+			   -- M.close(r) -- close unused read end
+
+			   -- -- write the bytes for the child process to the pipe
+			   -- M.write(w,'hello dolly\n')
+			   -- M.close(w)
+			   -- wait for child to finish
+			   -- local pw = require 'posix.sys.wait'
+			-- local _, t_cmd = wboot:create_thread(wboot.wait_tread,childpid)
+			-- t_cmd:detach()
+			   S = require 'posix.signal'
+			   for k,v in pairs(S) do print(k,v) end
+			   S.signal(17,S.SIG_IGN)
+			   local syswait = require 'posix.sys.wait'
+			  	local pid, status, code = syswait.wait(-1, syswait.WNOHANG)
+			end
+			-- local _, t_cmd = wboot:create_thread(wboot.test_tread,args)
+			-- t_cmd:detach()
+		end
+end
+
+function wboot.wait_tread(childpid)
+	require 'posix.sys.wait'.wait(childpid)
+end
+function wboot.test_tread(args)
+			-- socket:close()
+			local f=loadfile("/usr/bin/wbctl")
+			f(args)
+			-- os.execute("/usr/bin/wbctl")
+			-- return 0
+end
+---------------------------------------------------------------------------------
+
+function wboot.socket:stop()
+	 set:remove(input)
+	 socket:close()
+    os.remove(SOCKET)
+end
+function wboot:GenBoot(mac)
+
+end
+function wboot.socket:start()
+
+assert(socket:bind(SOCKET,0))
+assert(socket:listen(20))	
+	set = newset()
+
+	socket:settimeout(1)
+
+	set:insert(socket)
+
+	local stopSrv = false
+	while true do
+		local readable, _, error = libsocket.select(set, nil)
+		for _, input in ipairs(readable) do
+			if input == socket then
+		        	conn = assert(input:accept())
+					conn:settimeout(1)	
+			      set:insert(conn)
+			else
+				if input ~= nil then	
+						data, error=input:receive()
+
+						if not data then
+								print("socket free")
+				        		input:close()
+								set:remove(input)
+						elseif json_parse(data) == false then
+				        			print("Got line: " .. data)
+					        		input:send("echo: " .. data .. "\n")
+				        	if data == "stop()" then 
+				        		wboot.socket:stop()
+								stopSrv = true
+							elseif data == "cmd()" then
+								 print("MAC: ", mac)
+								 wboot:cmd(mac);
+							end
+						elseif json_parse(data) ~= false then
+								   local js = require"cjson"
+								  
+								   local cmd_data = js.decode(data)
+								   	if cmd_data.command ~= nil and cmd_data.command == "cmd_boot()"  then
+								   		if cmd_data.mac ~= nil and wboot.state.mac[cmd_data.mac] == nil then 
+								   			wboot.state.mac[cmd_data.mac] = {}
+								   			input:send("0\n")
+								   			wboot:cmd(inifile.load("/etc/wboot/wdb.ini"), cmd_data.mac)
+								   		elseif  cmd_data.mac ~= nil and wboot.state.mac[cmd_data.mac] ~= nil and wboot.state.mac[cmd_data.mac].status ~= true then
+								   			input:send("1\n")
+								   		elseif  cmd_data.mac ~= nil and wboot.state.mac[cmd_data.mac] ~= nil and wboot.state.mac[cmd_data.mac].status then
+								   			input:send("2\n")
+								   		end
+								   	elseif cmd_data.command ~= nil and cmd_data.command == "cmd_booting_ready()"  then
+								   		if cmd_data.mac ~= nil and wboot.state.mac[cmd_data.mac] ~= nil then 
+								   			wboot.state.mac[cmd_data.mac].status = true;
+								   			input:close()
+								   			set:remove(input)
+											end
+										elseif cmd_data.command ~= nil and cmd_data.command == "cmd_booting_free()"  then
+											if cmd_data.mac ~= nil and wboot.state.mac[cmd_data.mac] ~= nil and wboot.state.mac[cmd_data.mac].status == true then 
+												print(wboot.state.mac[cmd_data.mac])
+												wboot.state.mac[cmd_data.mac] = nil
+												print(wboot.state.mac[cmd_data.mac])
+												input:send("OK\n")
+											end
+										else
+											 input:send("api: ok\n")								   			
+								   	end
+								
+
+
+					  end
+				
+				end
+			end
+		end
+		if stopSrv then break end
+	   
+	end	
+end
+
+-----------------------------------------MAIN--------------------------------------
+-- verbose = #arg > 0
+--wboot:start()
+
+--wboot:fork('a8:0a:59:4f:55:b6')
+		mac = 'a8:0a:59:4f:55:b6'
+	
+		wboot:start()

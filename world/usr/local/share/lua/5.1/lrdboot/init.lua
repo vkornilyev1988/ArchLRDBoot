@@ -1,0 +1,1 @@
+/storage/st0/bin/lib/boot.lua
