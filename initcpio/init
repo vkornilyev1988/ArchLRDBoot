@@ -93,6 +93,13 @@ if [ "${break}" = "postmount" ]; then
 fi
 
 [ ! -d "/storage" ] && mkdir -p /storage 2>/dev/null || true
+[ ! -d "/var/lib/nginx/uwsgi" ] && mkdir -p /var/lib/nginx/uwsgi || true
+[ ! -d "/var/lib/nginx/client-body" ] && mkdir -p /var/lib/nginx/client-body || true
+[ ! -d "/var/lib/nginx/fastcgi" ] && mkdir -p /var/lib/nginx/fastcgi || true
+[ ! -d "/var/lib/nginx/proxy" ] && mkdir -p /var/lib/nginx/proxy || true
+[ ! -d "/var/lib/nginx/scgi" ] && mkdir -p /var/lib/nginx/scgi || true
+[ ! -d "/var/log/nginx" ] && mkdir -p /var/log/nginx || true
+
 
 # this should always be the last thing we do before the switch_root.
 rdlogger_stop

@@ -20,8 +20,8 @@ local function check_keys(mac)
     local inifile = require"ini".load("/etc/wboot/wdb.ini")
     local boot_info = [[#!ipxe
 
-chain http://{next-server}:8081/BootAip?mac={net0/mac}&boot=complite
-set  set keep-san 1
+set keep-san 1
+chain http://${next-server}:8081/BootApi?GenBoot=cmd_booting_free()&mac=${net0/mac}
     ]] 
     if inifile[mac].ipv4 ~= nil then boot_info = boot_info .. [[
 
@@ -42,7 +42,7 @@ local iscsi_port,next_server,wks_hostname
 
 
     if inifile[mac].iscsi_port ~= nil then iscsi_port = inifile[mac].iscsi_port else iscsi_port = "3260" end
-    if inifile[mac].nextserver ~= nil then next_server = inifile[mac].nextserver else next_server = "{next-server}" end
+    if inifile[mac].nextserver ~= nil then next_server = inifile[mac].nextserver else next_server = "${next-server}" end
 
     boot_info = boot_info .. [[
 
@@ -67,7 +67,7 @@ end
 echo Booting ...
 sleep 1]], check_keys(mac)..[[
 
-sanboot {root_path} || reboot]]
+sanboot ${root_path} || reboot]]
                         -- ngx.say(ngx.req.get_uri_args()["mac"]) 
                         -- loadfile("/etc/nginx/conf.d/wboot_client.lua")
                             obj = master:connect("/tmp/socket.sock")
@@ -83,8 +83,12 @@ sanboot {root_path} || reboot]]
 
                                             if data == "1" or data == "0"  then
                                                 ngx.say(WaitBooting)
-                                            elseif data == "2"then
+                                            elseif data == "2" then
                                                 ngx.say(BootOpt)
+					    elseif data == "-1" then
+					        ngx.say([[#!ipxe
+echo Clearing...
+]])
                                             elseif data == nil then
                                                 --print("NIL")       
                                                 sleep(0.01)
