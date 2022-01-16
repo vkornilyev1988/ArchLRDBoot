@@ -67,7 +67,7 @@ end
 echo Booting ...
 sleep 1]], check_keys(mac)..[[
 
-sanboot ${root_path} || reboot]]
+sanboot --keep ${root_path} || reboot]]
                         -- ngx.say(ngx.req.get_uri_args()["mac"]) 
                         -- loadfile("/etc/nginx/conf.d/wboot_client.lua")
                             obj = master:connect("/tmp/socket.sock")
